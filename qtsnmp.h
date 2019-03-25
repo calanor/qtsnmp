@@ -17,6 +17,7 @@
 #include <QByteArray>
 #include <QString>
 #include <QUdpSocket>
+#include <vector>
  
 class SNMPSession : public QObject {
  
@@ -47,9 +48,7 @@ public:
 // additional public methods
  
 private:
-    int getValueFromGetResponse(QString &receivedValue, QByteArray &receivedDatagram,
-                                    const int &errorIndex, const int &valueTypeIndex,
-                                    const int &valueIndex, const int &valueLenghtIndex);
+    int getValueFromGetResponse(QString &receivedValue, QByteArray &receivedDatagram);
     QByteArray convertIntAccordingToBER(int valueToConvert);
     void convertOIDAccordingToBER(QByteArray &oid);
  
@@ -57,6 +56,16 @@ private:
     QHostAddress *agentAddress;
     qint16 agentPort;
     qint16 socketPort;
+
+    int buildInt(int numBytes, QByteArray dataPart);
+    bool decodeSNMP( QByteArray data );
+
+    struct smntp_bloc {
+        int type;
+        int len;
+        QByteArray data;
+    };
+    std::vector<smntp_bloc> snmpBlocs;
 };
  
 #endif // QTSNMP_H
