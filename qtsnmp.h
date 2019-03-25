@@ -9,8 +9,8 @@
  */
  
  
-#ifndef SNMPSESSION_H
-#define SNMPSESSION_H
+#ifndef QTSNMP_H
+#define QTSNMP_H
  
 #include <QObject>
 #include <QHostAddress>
@@ -52,7 +52,6 @@ private:
                                     const int &valueIndex, const int &valueLenghtIndex);
     QByteArray convertIntAccordingToBER(int valueToConvert);
     void convertOIDAccordingToBER(QByteArray &oid);
-    void convertOIDAccordingToBER(QByteArray &oid);
  
     QUdpSocket udpSocket;
     QHostAddress *agentAddress;
@@ -60,4 +59,4 @@ private:
     qint16 socketPort;
 };
  
-#endif // SNMPSESSION_H
+#endif // QTSNMP_H
