@@ -1,7 +1,6 @@
-#include "snmpsession.h"
-#include <QList>
-#include <QMessageBox>
-#include "managerthread.h"
+#include "qtsnmp.h"
+#include <QObject>
+#include <QThread>
 
 //----[ Constructors/Destructors ]-----------------------------------------------------
 
@@ -79,8 +78,8 @@ qint16 SNMPSession::getSocketPort() const
 */
 int SNMPSession::sendSetRequest(const QString &communityStringParameter, const QString oidParameter, int value)
 {
-    QByteArray communityString = communityStringParameter.toAscii();
-    QByteArray oid = oidParameter.toAscii();
+    QByteArray communityString = communityStringParameter.toLatin1();
+    QByteArray oid = oidParameter.toLatin1();
 
     QByteArray datagram; // the datagram to send
     QByteArray receivedDatagram; // the received value
@@ -178,7 +177,7 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter, const Q
             return receivedDatagram.at(errorIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -195,7 +194,7 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter, const Q
             return receivedDatagram.at(errorIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -211,7 +210,7 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter, const Q
             udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
             return receivedDatagram.at(errorIndex);
         }
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -233,9 +232,9 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter, const Q
 int SNMPSession::sendSetRequest(const QString &communityStringParameter,
                        const QString oidParameter, const QString &valueParameter)
 {
-    QByteArray communityString = communityStringParameter.toAscii();
-    QByteArray oid = oidParameter.toAscii();
-    QByteArray value = valueParameter.toAscii();
+    QByteArray communityString = communityStringParameter.toLatin1();
+    QByteArray oid = oidParameter.toLatin1();
+    QByteArray value = valueParameter.toLatin1();
 
     QByteArray datagram; // the datagram to send
     QByteArray receivedDatagram; // the received value
@@ -352,7 +351,7 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter,
             return receivedDatagram.at(errorIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -369,7 +368,7 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter,
             return receivedDatagram.at(errorIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -386,7 +385,7 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter,
             return receivedDatagram.at(errorIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -407,8 +406,8 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter,
 int SNMPSession::sendGetRequest(QString &receivedValue,
                                 const QString &communityStringParameter, const QString &oidParameter)
 {
-    QByteArray communityString = communityStringParameter.toAscii();
-    QByteArray oid = oidParameter.toAscii();
+    QByteArray communityString = communityStringParameter.toLatin1();
+    QByteArray oid = oidParameter.toLatin1();
 
     QByteArray datagram; // the datagram to send
     QByteArray receivedDatagram; // the received datagram
@@ -496,7 +495,7 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
                                             valueTypeIndex, valueIndex, valueLenghtIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -512,7 +511,7 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
                                             valueTypeIndex, valueIndex, valueLenghtIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -528,7 +527,7 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
                                             valueTypeIndex, valueIndex, valueLenghtIndex);
         }
 		
-        ManagerThread::sendSleep(1);
+        QThread::msleep(1);
         timeoutTimer++;
     }
 	
@@ -556,6 +555,7 @@ int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &rec
                                     const int &errorIndex, const int &valueTypeIndex,
                                     const int &valueIndex, const int &valueLenghtIndex)
 {
+
     receivedDatagram.resize(udpSocket.pendingDatagramSize());
     udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
 	
