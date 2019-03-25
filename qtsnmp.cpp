@@ -412,11 +412,6 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
     QByteArray datagram; // the datagram to send
     QByteArray receivedDatagram; // the received datagram
 
-    const int errorIndex = 14 + communityString.size();
-    const int valueTypeIndex = 24 + oid.split('.').size() + communityString.size() + 1;
-    const int valueLenghtIndex = 24 + oid.split('.').size() + communityString.size() + 2;
-    const int valueIndex = 24 + oid.split('.').size() + communityString.size() + 3;
-
 // include Value field
     int currentLength = 2;
     datagram.push_front((char)0x0);
@@ -491,8 +486,7 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
     {
         if(udpSocket.hasPendingDatagrams())
         {
-            return result = getValueFromGetResponse(receivedValue, receivedDatagram, errorIndex,
-                                            valueTypeIndex, valueIndex, valueLenghtIndex);
+            return result = getValueFromGetResponse(receivedValue, receivedDatagram);
         }
 		
         QThread::msleep(1);
@@ -507,8 +501,7 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
     {
         if(udpSocket.hasPendingDatagrams())
         {
-            return result = getValueFromGetResponse(receivedValue, receivedDatagram, errorIndex,
-                                            valueTypeIndex, valueIndex, valueLenghtIndex);
+            return result = getValueFromGetResponse(receivedValue, receivedDatagram);
         }
 		
         QThread::msleep(1);
@@ -523,8 +516,7 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
     {
         if(udpSocket.hasPendingDatagrams())
         {
-            return result = getValueFromGetResponse(receivedValue, receivedDatagram, errorIndex,
-                                            valueTypeIndex, valueIndex, valueLenghtIndex);
+            return result = getValueFromGetResponse(receivedValue, receivedDatagram);
         }
 		
         QThread::msleep(1);
@@ -541,6 +533,44 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
 
 //----[ Other private methods ]-----------------------------------------------------
 
+int SNMPSession::buildInt(int numBytes, QByteArray dataPart)
+{
+    int total = 0;
+    int swift = 0;
+
+    for( int n = numBytes; n > 0; n --)
+    {
+       total += dataPart.at(n-1) & 0xff << swift;
+       swift += 8;
+    }
+    return total;
+}
+
+bool SNMPSession::decodeSNMP( QByteArray data)
+{
+    int i = 0;
+    int part = 0;
+    while( i < data.length() )
+    {
+        struct smntp_bloc bloc;
+        bloc.type = data.at(i++) & 0xff;
+        bloc.len = data.at(i++) & 0xff;
+        if( bloc.len > 0x80 ) // long form
+        {
+            int numBytes = bloc.len & 0x7f;
+            bloc.len = buildInt( numBytes, data.mid(i));
+            i+=numBytes-1;
+        }
+        bloc.data = data.mid(i,bloc.len);
+        if( bloc.type == 0x02 || bloc.type == 0x04 || bloc.type  == 0x06 )
+           i += bloc.len;
+        else
+           i++;
+        part++;
+        snmpBlocs.push_back(bloc);
+    }
+}
+
 /**
 *   This method will extract the value from the specified GetResponse datagram.
 *   Returns 0 on success or one of the following error codes on failture :
@@ -551,50 +581,38 @@ int SNMPSession::sendGetRequest(QString &receivedValue,
 *   5 -- General Error (some error other than the ones listed above)
 *   6 -- Timeout, no response from agent (5 seconds)
 */
-int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &receivedDatagram,
-                                    const int &errorIndex, const int &valueTypeIndex,
-                                    const int &valueIndex, const int &valueLenghtIndex)
+int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &receivedDatagram)
 {
 
     receivedDatagram.resize(udpSocket.pendingDatagramSize());
-    udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
+    int len = udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
+
+    decodeSNMP(receivedDatagram);
+
+    int errorStatus = snmpBlocs[5].data.at(0);
+    int valueType = snmpBlocs[10].type;
+    int valueLenght = snmpBlocs[10].len;
+    QByteArray data = snmpBlocs[10].data;
 	
     // if there is a problem, return the error code
-    if(receivedDatagram.at(errorIndex) != 0)
+    if( errorStatus != 0)
 	{
-		return receivedDatagram.at(21);
+        return errorStatus;
 	}
 		
     // if it's integer
-    if(receivedDatagram.at(valueTypeIndex) == 0x02)
+    if( valueType == 0x02)
     {
-        if(valueIndex == receivedDatagram.size()-1) // if value is one byte
-        {
-            receivedValue = QString::number((unsigned char)receivedDatagram.at(valueIndex), 10);
-			
-            return 0;
-        } else if(receivedDatagram.at(valueIndex) == 0) // if it's two bytes, but the first is 0, it's a bug
-        {
-            receivedValue = QString::number((unsigned char)receivedDatagram.at(valueIndex + 1), 10);
-			
-            return 0;
-        } else // else, the value is two bytes and therefore conversion is needed
-        {
-            int firstHex = (unsigned char)receivedDatagram.at(valueIndex);
-            int secondHex = (unsigned char)receivedDatagram.at(valueIndex+1);
-            int resultValue = (firstHex * 256) + secondHex;
-
-            receivedValue = QString::number(resultValue);
-            return 0;
-        }
+        receivedValue = QString::number(buildInt(valueLenght,snmpBlocs[10].data));
+        return 0;
     }
 	
     // if it's an  IP address
-    if(receivedDatagram.at(valueTypeIndex) == 0x40)
+    if( valueType == 0x40)
     {
         QString octet;
-        for(int i = 0;i < receivedDatagram.at(valueLenghtIndex);i++){
-            octet = QString::number((unsigned char)receivedDatagram.at(valueIndex+i), 10);
+        for(int i = 0;i < valueLenght; i++){
+            octet = QString::number((unsigned char)snmpBlocs[10].data.at(i), 10);
             receivedValue.push_back(octet);
             receivedValue.push_back(".");
         }
@@ -605,14 +623,9 @@ int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &rec
     }
 	
    // if it's an octet string
-   if(receivedDatagram.at(valueTypeIndex) == 0x04)
+   if( valueType == 0x04)
     {
-        for(int i = 0;i < receivedDatagram.at(valueLenghtIndex);i++){
-            if(receivedDatagram.at(valueIndex+i) == 0x0)
-                continue;
-            receivedValue.push_back(receivedDatagram.at(valueIndex+i));
-        }
-		
+        receivedValue = data;
         return 0;
     }
 	
