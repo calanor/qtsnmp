@@ -563,21 +563,21 @@ bool SNMPSession::decodeSNMP( QByteArray data)
     int i = 0;
     while( i < data.length() )
     {
-        struct smntp_bloc bloc;
-        bloc.type = data.at(i++) & 0xff;
-        bloc.len = data.at(i++) & 0xff;
-        if( bloc.len > 0x80 ) // long form
+        struct tlv part;
+        part.type = data.at(i++) & 0xff;
+        part.len = data.at(i++) & 0xff;
+        if( part.len > 0x80 ) // long form
         {
-            int numBytes = bloc.len & 0x7f;
-            bloc.len = buildInt( numBytes, data.mid(i));
+            int numBytes = part.len & 0x7f;
+            part.len = buildInt( numBytes, data.mid(i));
             i+=numBytes-1;
         }
-        bloc.data = data.mid(i,bloc.len);
-        if( bloc.type == 0x02 || bloc.type == 0x04 || bloc.type  == 0x06 )
-           i += bloc.len;
+        part.value = data.mid(i,part.len);
+        if( part.type == 0x02 || part.type == 0x04 || part.type  == 0x06 )
+           i += part.len;
         else
            i++;
-        snmpBlocs.push_back(bloc);
+        snmpTlvParts.push_back(part);
     }
 }
 
@@ -599,9 +599,9 @@ int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &rec
 
     decodeSNMP(receivedDatagram);
 
-    int valueType = snmpBlocs[10].type;
-    int valueLenght = snmpBlocs[10].len;
-    QByteArray data = snmpBlocs[10].data;
+    int valueType = snmpTlvParts[10].type;
+    int valueLenght = snmpTlvParts[10].len;
+    QByteArray data = snmpTlvParts[10].value;
 	
     // if there is a problem, return the error code
     if( errorStatus() != 0)
@@ -612,7 +612,7 @@ int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &rec
     // if it's integer
     if( valueType == 0x02)
     {
-        receivedValue = QString::number(buildInt(valueLenght,snmpBlocs[10].data));
+        receivedValue = QString::number(buildInt(valueLenght,snmpTlvParts[10].value));
         return 0;
     }
 	
@@ -621,7 +621,7 @@ int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &rec
     {
         QString octet;
         for(int i = 0;i < valueLenght; i++){
-            octet = QString::number((unsigned char)snmpBlocs[10].data.at(i), 10);
+            octet = QString::number((unsigned char)snmpTlvParts[10].value.at(i), 10);
             receivedValue.push_back(octet);
             receivedValue.push_back(".");
         }

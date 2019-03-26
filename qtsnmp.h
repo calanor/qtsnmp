@@ -59,14 +59,14 @@ private:
 
     int buildInt(int numBytes, QByteArray dataPart);
     bool decodeSNMP( QByteArray data );
-    int errorStatus() { return snmpBlocs[5].data.at(0); }
+    int errorStatus() { return snmpTlvParts[5].value.at(0); }
 
-    struct smntp_bloc {
+    struct tlv {
         int type;
         int len;
-        QByteArray data;
+        QByteArray value;
     };
-    std::vector<smntp_bloc> snmpBlocs;
+    std::vector<tlv> snmpTlvParts;
 };
  
 #endif // QTSNMP_H
