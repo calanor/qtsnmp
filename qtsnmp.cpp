@@ -174,7 +174,9 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter, const Q
         {
             receivedDatagram.resize(udpSocket.pendingDatagramSize());
             udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
-            return receivedDatagram.at(errorIndex);
+
+            decodeSNMP(receivedDatagram);
+            return errorStatus();
         }
 		
         QThread::msleep(1);
@@ -191,7 +193,9 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter, const Q
         {
             receivedDatagram.resize(udpSocket.pendingDatagramSize());
             udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
-            return receivedDatagram.at(errorIndex);
+
+            decodeSNMP(receivedDatagram);
+            return errorStatus();
         }
 		
         QThread::msleep(1);
@@ -208,7 +212,9 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter, const Q
         {
             receivedDatagram.resize(udpSocket.pendingDatagramSize());
             udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
-            return receivedDatagram.at(errorIndex);
+
+            decodeSNMP(receivedDatagram);
+            return errorStatus();
         }
         QThread::msleep(1);
         timeoutTimer++;
@@ -348,7 +354,9 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter,
         {
             receivedDatagram.resize(udpSocket.pendingDatagramSize());
             udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
-            return receivedDatagram.at(errorIndex);
+
+            decodeSNMP(receivedDatagram);
+            return errorStatus();
         }
 		
         QThread::msleep(1);
@@ -365,7 +373,9 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter,
         {
             receivedDatagram.resize(udpSocket.pendingDatagramSize());
             udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
-            return receivedDatagram.at(errorIndex);
+
+            decodeSNMP(receivedDatagram);
+            return errorStatus();
         }
 		
         QThread::msleep(1);
@@ -382,7 +392,9 @@ int SNMPSession::sendSetRequest(const QString &communityStringParameter,
         {
             receivedDatagram.resize(udpSocket.pendingDatagramSize());
             udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
-            return receivedDatagram.at(errorIndex);
+
+            decodeSNMP(receivedDatagram);
+            return errorStatus();
         }
 		
         QThread::msleep(1);
@@ -549,7 +561,6 @@ int SNMPSession::buildInt(int numBytes, QByteArray dataPart)
 bool SNMPSession::decodeSNMP( QByteArray data)
 {
     int i = 0;
-    int part = 0;
     while( i < data.length() )
     {
         struct smntp_bloc bloc;
@@ -566,7 +577,6 @@ bool SNMPSession::decodeSNMP( QByteArray data)
            i += bloc.len;
         else
            i++;
-        part++;
         snmpBlocs.push_back(bloc);
     }
 }
@@ -589,15 +599,14 @@ int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &rec
 
     decodeSNMP(receivedDatagram);
 
-    int errorStatus = snmpBlocs[5].data.at(0);
     int valueType = snmpBlocs[10].type;
     int valueLenght = snmpBlocs[10].len;
     QByteArray data = snmpBlocs[10].data;
 	
     // if there is a problem, return the error code
-    if( errorStatus != 0)
+    if( errorStatus() != 0)
 	{
-        return errorStatus;
+        return errorStatus();
 	}
 		
     // if it's integer

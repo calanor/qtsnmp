@@ -59,6 +59,7 @@ private:
 
     int buildInt(int numBytes, QByteArray dataPart);
     bool decodeSNMP( QByteArray data );
+    int errorStatus() { return snmpBlocs[5].data.at(0); }
 
     struct smntp_bloc {
         int type;
