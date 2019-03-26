@@ -565,18 +565,18 @@ bool SNMPSession::decodeSNMP( QByteArray data)
     {
         struct tlv part;
         part.type = data.at(i++) & 0xff;
-        part.len = data.at(i++) & 0xff;
+        part.len = data.at(i) & 0xff;
         if( part.len > 0x80 ) // long form
         {
             int numBytes = part.len & 0x7f;
-            part.len = buildInt( numBytes, data.mid(i));
-            i+=numBytes-1;
+            part.len = buildInt( numBytes, data.mid(++i));
+            i+=numBytes;
         }
+        else
+            i++;
         part.value = data.mid(i,part.len);
         if( part.type == 0x02 || part.type == 0x04 || part.type  == 0x06 )
            i += part.len;
-        else
-           i++;
         snmpTlvParts.push_back(part);
     }
 }
@@ -596,7 +596,6 @@ int SNMPSession::getValueFromGetResponse(QString &receivedValue, QByteArray &rec
 
     receivedDatagram.resize(udpSocket.pendingDatagramSize());
     int len = udpSocket.readDatagram(receivedDatagram.data(), receivedDatagram.size());
-
     decodeSNMP(receivedDatagram);
 
     int valueType = snmpTlvParts[10].type;
